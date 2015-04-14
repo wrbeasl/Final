@@ -1,11 +1,13 @@
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -58,6 +60,31 @@ public class Main{
 		return temp;
 	}
 	
+	public static void genDates() throws IOException{
+		Parse parse = new Parse();
+		PrintWriter pw = new PrintWriter("release_dates.txt", "UTF-8");
+		InputStream is = new FileInputStream("movies.txt");
+		InputStreamReader isr = new InputStreamReader(is);
+		BufferedReader br = new BufferedReader(isr);
+		
+		String line = null;
+		String PID;
+		while((line = br.readLine()) != null){
+			String[] temp1 = line.split(" ");
+			if(temp1[0].contains("Id")){
+				PID = temp1[1];
+				String date = parse.getDate(PID);
+				pw.write(PID + " " + date);
+			}
+		}
+		
+		pw.close();
+		is.close();
+		isr.close();
+		br.close();
+		
+	}
+	
 	public static void setup() throws IOException{
 		InputStream is = new FileInputStream("release_dates.txt");
 		InputStreamReader isr = new InputStreamReader(is);
@@ -75,6 +102,7 @@ public class Main{
 	}
 	
 	public static void main(String[] args) throws IOException{
+		genDates();
 		setup();
 		getHP();
 	}
