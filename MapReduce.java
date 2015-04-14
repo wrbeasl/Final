@@ -3,11 +3,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Date;
 import java.util.HashMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -19,34 +20,63 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.joda.time.DateTime;
 import org.joda.time.Seconds;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 
 public class MapReduce { 
 	
 
 	private static HashMap<String, String[]> matchMap = new HashMap<String, String[]>();
-	private static HashMap<String, Float> hpMap = new HashMap<String, Float>();
-	static String PID, TS;
 	
-	public static class Map extends Mapper<LongWritable, Text, Text, Review>{
+    public static class TextArrayWritable extends ArrayWritable {
+        public TextArrayWritable() {
+            super(Text.class);
+        }
+
+        public TextArrayWritable(String[] strings) {
+            super(Text.class);
+            Text[] texts = new Text[strings.length];
+            for (int i = 0; i < strings.length; i++) {
+                texts[i] = new Text(strings[i]);
+            }
+            set(texts);
+        }
+    }
+
+	
+	public static class Map extends Mapper<LongWritable, Text, Text, ArrayWritable>{
 		
 		@Override
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			
 			String line = value.toString();
-			System.out.println(line);
-			String[] split = line.split(" ");
-
-				if(matchMap.containsKey(split[0])){
-					String ts = matchMap.get(split[0])[1];
-					String hp = matchMap.get(split[0])[0];
+			//System.out.println(line);
+			String PID = line.substring(0, line.indexOf(" "));
+			String RD  = line.substring(line.indexOf(" ")+2, line.length());
+			//System.out.println(split[0] + " " + (split[1].compareTo("") != 0));
+				if(matchMap.containsKey(PID)){
+					//System.out.println("T");
+					String[] ts = matchMap.get(PID);
+					//System.out.println(ts[0]);
+					String[] hp = matchMap.get(PID)[1].split("/");
+					float l = Float.parseFloat(hp[0]);
+					float r = Float.parseFloat(hp[1]);
+					float t = l / r;
 					
-					Review r = new Review(new FloatWritable(Float.parseFloat(hp)),
-							   new LongWritable(Long.parseLong(ts)),
-							   new LongWritable(Long.parseLong(split[1])));
 					
-					context.write(new Text(split[0]), r);
-				}
+					
+					String[] txt2 = new String[3];
+					txt2[0] = RD;
+					txt2[1] = ts[0];
+					txt2[2] = (t + "");
+					//System.out.println(txt2[0].toString());
+			
+					TextArrayWritable txt = new TextArrayWritable(txt2);
+					//System.out.println("T");
+						context.write(new Text(PID),txt);
+			
+				} else { return; }
 			
 		}
 		
@@ -62,6 +92,7 @@ public class MapReduce {
 			while((line = br.readLine())!=null){
 				// Split the line
 				String[] split = line.split("::");
+				//System.out.println(split[0]);
 				// Make an array
 				String[] temp = new String[2];
 				// This is the time stamp
@@ -77,21 +108,64 @@ public class MapReduce {
 		}
 	}
 		
-	public static class Reduce extends Reducer<Text, Review, Text, Text>{
+	public static class Reduce extends Reducer<Text, TextArrayWritable, Text, Text>{
 
+		
+		private HashMap<String, String> time = new HashMap<String, String>();
 		
 		// The key is the product ID and the Float are the helpfulness of reviews
 		@Override
-		public void reduce(Text key, Iterable<Review> values, Context context) throws IOException, InterruptedException{
+		public void reduce(Text key, Iterable< TextArrayWritable > values, Context context) throws IOException, InterruptedException{
 			
-			String curProduct = key.toString();
-			for(Review r : values){
-				DateTime release = new DateTime(r.getRD());
-				DateTime post = new DateTime(r.getTS());
-				Seconds seconds = Seconds.secondsBetween(release, post);
+			
+			//System.out.println("T");
+			
+			for(TextArrayWritable t : values){
+				String[] txt = new String[3];
+				String TS, HP, RD;
+				for(int i = 0; i < t.get().length; ++i){
+
+					txt[i] = t.get()[i].toString();
+					if(txt[i]==null) txt[i] = 0+"";
+					System.out.println(i + " " + txt[i]);
+				}
 				
-				context.write(new Text(curProduct), new Text(seconds.getSeconds()+""));
+				DateTime post = new DateTime(Long.parseLong(txt[1]));
+			
+			
+				String[] MDY = txt[0].split(" ");
+				MDY[1] = MDY[1].substring(0, MDY[1].indexOf(","));
+				
+				int month = 0;
+				if(MDY[0].compareTo("January") == 0) month = 1;
+				if(MDY[0].compareTo("February") == 0) month = 2;
+				if(MDY[0].compareTo("March") == 0) month = 3;
+				if(MDY[0].compareTo("April") == 0) month = 4;
+				if(MDY[0].compareTo("May") == 0) month = 5;
+				if(MDY[0].compareTo("June") == 0) month = 6;
+				if(MDY[0].compareTo("July") == 0) month = 7;
+				if(MDY[0].compareTo("August") == 0) month = 8;
+				if(MDY[0].compareTo("September") == 0) month = 9;
+						if(MDY[0].compareTo("October") == 0) month = 10;
+				if(MDY[0].compareTo("November") == 0) month = 11;
+				if(MDY[0].compareTo("December") == 0) month = 12;
+				
+				DateTime rd = new DateTime(Integer.parseInt(MDY[2]), month, Integer.parseInt(MDY[1]), 0, 0);
+				
+
+				Seconds seconds = Seconds.secondsBetween(rd, post);
+				
+				String[] output = new String[3];
+				output[0] = key.toString();
+				output[1] = seconds.toString();
+				output[2] = txt[2];
+				
+				//TextArrayWritable out_array = new TextArrayWritable(output);
+				String t_out = output[1] + " " + output[2];
+				context.write(key, new Text(t_out));
+
 			}
+			
 		}
 
 	
@@ -101,12 +175,11 @@ public class MapReduce {
 		Configuration conf = new Configuration();
 		conf.set("matchfile", "helpfulness.txt");
 		
-		@SuppressWarnings("deprecation")
-		Job job = new Job(conf, "MapReduce");
-		job.setJarByClass(Main.class);
+		Job job = Job.getInstance(conf);
+		job.setJarByClass(MapReduce.class);
 		
 		job.setMapOutputKeyClass(Text.class);
-		job.setMapOutputValueClass(Review.class);
+		job.setMapOutputValueClass(TextArrayWritable.class);
 		
 		job.setOutputKeyClass(Text.class);
 		job.setOutputValueClass(Text.class);
@@ -120,9 +193,7 @@ public class MapReduce {
 		FileInputFormat.addInputPath(job, new Path("release_dates.txt"));
 		FileOutputFormat.setOutputPath(job, new Path("output2"));
 		
-		job.waitForCompletion(true);
+		System.exit(job.waitForCompletion(true) ? 0 : 1);
 	}
 	
-
-
 }
