@@ -161,7 +161,7 @@ public class MapReduce {
 				output[2] = txt[2];
 				
 				//TextArrayWritable out_array = new TextArrayWritable(output);
-				String t_out = output[1] + " " + output[2];
+				String t_out = output[1].substring(3, output[1].length()) + " " + output[2];
 				context.write(key, new Text(t_out));
 
 			}
