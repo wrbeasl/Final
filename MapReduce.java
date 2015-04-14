@@ -51,14 +51,10 @@ public class MapReduce {
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 			
 			String line = value.toString();
-			//System.out.println(line);
 			String PID = line.substring(0, line.indexOf(" "));
 			String RD  = line.substring(line.indexOf(" ")+2, line.length());
-			//System.out.println(split[0] + " " + (split[1].compareTo("") != 0));
 				if(matchMap.containsKey(PID)){
-					//System.out.println("T");
 					String[] ts = matchMap.get(PID);
-					//System.out.println(ts[0]);
 					String[] hp = matchMap.get(PID)[1].split("/");
 					float l = Float.parseFloat(hp[0]);
 					float r = Float.parseFloat(hp[1]);
@@ -70,10 +66,10 @@ public class MapReduce {
 					txt2[0] = RD;
 					txt2[1] = ts[0];
 					txt2[2] = (t + "");
-					//System.out.println(txt2[0].toString());
+				
 			
 					TextArrayWritable txt = new TextArrayWritable(txt2);
-					//System.out.println("T");
+					
 						context.write(new Text(PID),txt);
 			
 				} else { return; }
@@ -92,7 +88,7 @@ public class MapReduce {
 			while((line = br.readLine())!=null){
 				// Split the line
 				String[] split = line.split("::");
-				//System.out.println(split[0]);
+	
 				// Make an array
 				String[] temp = new String[2];
 				// This is the time stamp
@@ -113,13 +109,11 @@ public class MapReduce {
 		
 		private HashMap<String, String> time = new HashMap<String, String>();
 		
-		// The key is the product ID and the Float are the helpfulness of reviews
+		// The key is the product ID and the TextArrayWritable's are the post date, release date, and helpfulness.
 		@Override
 		public void reduce(Text key, Iterable< TextArrayWritable > values, Context context) throws IOException, InterruptedException{
 			
-			
-			//System.out.println("T");
-			
+
 			for(TextArrayWritable t : values){
 				String[] txt = new String[3];
 				String TS, HP, RD;
@@ -160,9 +154,8 @@ public class MapReduce {
 				output[1] = seconds.toString();
 				output[2] = txt[2];
 				
-				//TextArrayWritable out_array = new TextArrayWritable(output);
-				String t_out = output[1].substring(3, output[1].length()) + " " + output[2];
-				context.write(key, new Text(t_out));
+				//String t_out = output[1].substring(3, output[1].length()) + " " + output[2];
+				context.write(new Text(output[1].substring(3, output[1].length())), new Text(output[2]));
 
 			}
 			
