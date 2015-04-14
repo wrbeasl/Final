@@ -10,7 +10,7 @@ import java.io.UnsupportedEncodingException;
 
 public class Fix {
 	public void main(String[] args) throws IOException{
-		Parse parse = new Parse();
+		//Parse parse = new Parse();
 		PrintWriter pw = new PrintWriter("release_dates_.txt", "UTF-8");
 		InputStream is = new FileInputStream("release_dates.txt");
 		InputStreamReader isr = new InputStreamReader(is);
